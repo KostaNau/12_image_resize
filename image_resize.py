@@ -18,19 +18,19 @@ def get_parser():
                     '''))
     parser.add_argument('target',
                         help="path to the image")
-    parser.add_argument('-width', '--width',
+    parser.add_argument('--width',
                         type=int,
                         default=None,
                         help="width result image")
-    parser.add_argument('-heigth', '--heigth',
+    parser.add_argument('--heigth',
                         type=int,
                         default=None,
                         help="heigth result image")
-    parser.add_argument('-scale', '--scale',
+    parser.add_argument('--scale',
                         type=float,
                         default=None,
                         help="scale result image")
-    parser.add_argument('-destination', '--destination',
+    parser.add_argument('--destination',
                         default=None,
                         help="path for save result image")
     return parser
@@ -44,61 +44,81 @@ def open_initial_image(path_to_image: str):
     return image
 
 
+def resize_image_sides(image, width, heigth):
+    return image.resize((width, heigth))
+
+
 def get_aspect_ratio(image):
-    width, heigth = image.size   # 2-tuple containing width and height
+    width, heigth = image.size
     return round(width / heigth, 2)
 
 
-def linear_size_change(image, user_width, user_heigth):
+def initialize_filename(image, **options):
+    base = path.basename(options['original_path'])
+    original_name = path.splitext(base)[0]
+    print(original_name)
+    extension = path.splitext(base)[1].lower()
+    if options['destination']:
+        name = options['destination'], original_name, *image.size, extension
+    else:
+        name = original_name, *image.size, extension
+    filename = '{}_{}x{}{}'.format(*name)
+    return filename
+
+
+def resize_linear(image, user_width, user_heigth):
     original_ratio = get_aspect_ratio(image)
     if user_width and user_heigth:
-        resize_image = image.resize((user_width, user_heigth))
-        if original_ratio != get_aspect_ratio(resize_image):
+        resized_image = resize_image_sides(image,
+                                           user_width,
+                                           user_heigth
+                                           )
+        if original_ratio != get_aspect_ratio(resized_image):
             print('Warning, your resized image has a wrong ratio!')
     elif user_width:
         adjusted_heigth = int(user_width * original_ratio)
-        resize_image = image.resize((user_width, adjusted_heigth))
+        resized_image = resize_image_sides(image,
+                                           user_width,
+                                           adjusted_heigth
+                                           )
     elif user_heigth:
         adjusted_width = int(user_heigth * original_ratio)
-        resize_image = image.resize((adjusted_width, user_heigth))
-    return resize_image
+        resized_image = resize_image_sides(image,
+                                           adjusted_width,
+                                           user_heigth
+                                           )
+    return resized_image
 
 
-def change_by_scale(image, scale):
+def resize_scale(image, scale):
     width, heigth = image.size
-    adjusted_width, adhusted_heigth = int(width * scale), int(heigth * scale)
-    resize_image = image.resize((adjusted_width, adhusted_heigth))
-    return resize_image
+    adjusted_width, adjusted_heigth = int(width * scale), int(heigth * scale)
+    resized_image = resize_image_sides(image,
+                                       adjusted_width,
+                                       adjusted_heigth
+                                       )
+    return resized_image
 
 
-def resize_image(image, options):
-    if options.scale and (options.width or options.heigth):
+def resize_new_image(image, **options):
+    if options['scale'] and (options['width'] or options['heigth']):
         raise TypeError('Incorrect. Either scale or height and width options')
-    elif options.scale:
-        return change_by_scale(image, options.scale)
-    elif options.width or options.heigth:
-        return linear_size_change(image, options.width, options.heigth)
-
-
-def save_resized_image(resize_image, options):
-    base = path.basename(options.target)
-    original_name = path.splitext(base)[0]
-    extension = path.splitext(base)[1].lower()
-    if options.destination:
-        resize_image.save(
-            '{0}{1}_{2}x{3}{4}'.format(
-                                        options.destination,
-                                        original_name,
-                                        *resize_image.size,
-                                        extension))
-    resize_image.save('{0}_{1}x{2}{3}'.format(
-                                              original_name,
-                                              *resize_image.size,
-                                              extension))
+    elif options['scale']:
+        return resize_scale(image, options['scale'])
+    elif options['width'] or options['heigth']:
+        return resize_linear(image, options['width'], options['heigth'])
 
 
 if __name__ == '__main__':
     options = get_parser().parse_args()
     original_image = open_initial_image(options.target)
-    new_image = resize_image(original_image, options)
-    save_resized_image(new_image, options)
+    new_image = resize_new_image(original_image,
+                                 width=options.width,
+                                 heigth=options.heigth,
+                                 scale=options.scale
+                                 )
+    filename = initialize_filename(new_image,
+                                   original_path=options.target,
+                                   destination=options.destination,
+                                   )
+    new_image.save(filename)
