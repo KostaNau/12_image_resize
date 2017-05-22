@@ -1,11 +1,12 @@
 import argparse
 import textwrap
+import sys
 from os import path
 
 from PIL import Image
 
 
-def get_parser():
+def get_parser() -> bytes:
     parser = argparse.ArgumentParser(
             formatter_class=argparse.RawDescriptionHelpFormatter,
             description=textwrap.dedent('''\
@@ -36,24 +37,18 @@ def get_parser():
     return parser
 
 
-def open_initial_image(path_to_image: str):
+def open_initial_image(path_to_image: str) -> bytes:
     try:
         image = Image.open(path_to_image)
+        print('Inital image: {}\nFormat: {}\nSize(px): {}\n\
+              Mode:{}\n'.format(path_to_image, image.format,
+                                image.size, image.mode))
     except IOError:
-        pass
+        sys.exit('Unsupported type of file, try again!')
     return image
 
 
-def resize_image_sides(image, width, heigth):
-    return image.resize((width, heigth))
-
-
-def get_aspect_ratio(image):
-    width, heigth = image.size
-    return round(width / heigth, 2)
-
-
-def initialize_filename(image, **options):
+def initialize_filename(image: bytes, **options: int/float) -> str:
     base = path.basename(options['original_path'])
     original_name = path.splitext(base)[0]
     print(original_name)
@@ -66,37 +61,46 @@ def initialize_filename(image, **options):
     return filename
 
 
-def resize_linear(image, user_width, user_heigth):
+def get_aspect_ratio(image: bytes) -> float:
+    width, heigth = image.size
+    return round(width / heigth, 2)
+
+
+def resize_sides(image: bytes, width: int, heigth: int) -> bytes:
+    return image.resize((width, heigth))
+
+
+def resize_linear(image: bytes, user_width: int, user_heigth: int) -> bytes:
     original_ratio = get_aspect_ratio(image)
     if user_width and user_heigth:
-        resized_image = resize_image_sides(image,
-                                           user_width,
-                                           user_heigth
-                                           )
+        resized_image = resize_sides(image,
+                                     user_width,
+                                     user_heigth
+                                     )
         if original_ratio != get_aspect_ratio(resized_image):
             print('Warning, your resized image has a wrong ratio!')
     elif user_width:
         adjusted_heigth = int(user_width * original_ratio)
-        resized_image = resize_image_sides(image,
-                                           user_width,
-                                           adjusted_heigth
-                                           )
+        resized_image = resize_sides(image,
+                                     user_width,
+                                     adjusted_heigth
+                                     )
     elif user_heigth:
         adjusted_width = int(user_heigth * original_ratio)
-        resized_image = resize_image_sides(image,
-                                           adjusted_width,
-                                           user_heigth
-                                           )
+        resized_image = resize_sides(image,
+                                     adjusted_width,
+                                     user_heigth
+                                     )
     return resized_image
 
 
-def resize_scale(image, scale):
+def resize_scale(image: bytes, scale: float) -> bytes:
     width, heigth = image.size
     adjusted_width, adjusted_heigth = int(width * scale), int(heigth * scale)
-    resized_image = resize_image_sides(image,
-                                       adjusted_width,
-                                       adjusted_heigth
-                                       )
+    resized_image = resize_sides(image,
+                                 adjusted_width,
+                                 adjusted_heigth
+                                 )
     return resized_image
 
 
