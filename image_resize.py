@@ -44,18 +44,17 @@ def open_initial_image(path_to_image: str) -> bytes:
               Mode:{}\n'.format(path_to_image, image.format,
                                 image.size, image.mode))
     except IOError:
-        sys.exit('Unsupported type of file, try again!')
+        return None
     return image
 
 
-def initialize_filename(image: bytes, **options: int/float) -> str:
+def initialize_filename(image: bytes, **options: dict) -> str:
     base = path.basename(options['original_path'])
     original_name = path.splitext(base)[0]
-    print(original_name)
     extension = path.splitext(base)[1].lower()
     if options['destination']:
-        base_name = options['destination'], original_name, *image.size, \
-         extension
+        base_name = options['destination'], original_name, \
+          *image.size, extension
     else:
         base_name = original_name, *image.size, extension
     filename = '{}_{}x{}{}'.format(*base_name)
@@ -117,13 +116,16 @@ def resize_new_image(image, **options):
 if __name__ == '__main__':
     options = get_parser().parse_args()
     original_image = open_initial_image(options.target)
-    new_image = resize_new_image(original_image,
-                                 width=options.width,
-                                 heigth=options.heigth,
-                                 scale=options.scale
-                                 )
-    filename = initialize_filename(new_image,
-                                   original_path=options.target,
-                                   destination=options.destination,
-                                   )
-    new_image.save(filename)
+    if original_image:
+        new_image = resize_new_image(original_image,
+                                     width=options.width,
+                                     heigth=options.heigth,
+                                     scale=options.scale
+                                     )
+        filename = initialize_filename(new_image,
+                                       original_path=options.target,
+                                       destination=options.destination,
+                                       )
+        new_image.save(filename)
+    else:
+        sys.exit('Unsupported file type, try again!')
