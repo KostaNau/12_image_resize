@@ -53,7 +53,7 @@ def initialize_filename(image: bytes, **options: dict) -> str:
     original_name = path.splitext(base)[0]
     extension = path.splitext(base)[1].lower()
     if options['destination']:
-        base_name = options['destination'], original_name, \
+        base_name = options['destination'] + original_name, \
           *image.size, extension
     else:
         base_name = original_name, *image.size, extension
